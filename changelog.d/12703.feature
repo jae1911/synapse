@@ -1,0 +1,1 @@
+Uniformize spam-checker API callback returns, give a spam-checker the ability to return specific error Codes instead of the generic `FORBIDDEN`.

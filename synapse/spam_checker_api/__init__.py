@@ -34,9 +34,11 @@ ALLOW = Allow("Allow")
 Return this constant to allow a message to pass.
 """
 
-Decision = Union[ALLOW, Codes]
+Decision = Union[Allow, Codes]
 """
 Union to define whether a request should be allowed or rejected.
+
+To accept a request, return `ALLOW`.
 
 To reject a request without any specific information, use `Codes.FORBIDDEN`.
 """
