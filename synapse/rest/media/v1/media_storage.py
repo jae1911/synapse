@@ -155,7 +155,7 @@ class MediaStorage:
                         # try/except below. The media also won't be stored in
                         # the DB.
                         raise SpamMediaException(
-                            "File rejected as probable spam", spam_check
+                            "File rejected as probable spam", spam_check.value
                         )
 
                     for provider in self.storage_providers:
