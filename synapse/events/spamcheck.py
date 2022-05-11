@@ -27,9 +27,10 @@ from typing import (
     Union,
 )
 
+from synapse.api.errors import Codes
 from synapse.rest.media.v1._base import FileInfo
 from synapse.rest.media.v1.media_storage import ReadableFileWrapper
-from synapse.spam_checker_api import RegistrationBehaviour
+from synapse.spam_checker_api import ALLOW, Decision, RegistrationBehaviour
 from synapse.types import RoomAlias, UserProfile
 from synapse.util.async_helpers import delay_cancellation, maybe_awaitable
 from synapse.util.metrics import Measure
@@ -40,17 +41,34 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+DEPRECATED_BOOL = bool
+
 CHECK_EVENT_FOR_SPAM_CALLBACK = Callable[
     ["synapse.events.EventBase"],
-    Awaitable[Union[bool, str]],
+    Awaitable[Union[ALLOW, Codes, str, DEPRECATED_BOOL]],
 ]
-USER_MAY_JOIN_ROOM_CALLBACK = Callable[[str, str, bool], Awaitable[bool]]
-USER_MAY_INVITE_CALLBACK = Callable[[str, str, str], Awaitable[bool]]
-USER_MAY_SEND_3PID_INVITE_CALLBACK = Callable[[str, str, str, str], Awaitable[bool]]
-USER_MAY_CREATE_ROOM_CALLBACK = Callable[[str], Awaitable[bool]]
-USER_MAY_CREATE_ROOM_ALIAS_CALLBACK = Callable[[str, RoomAlias], Awaitable[bool]]
-USER_MAY_PUBLISH_ROOM_CALLBACK = Callable[[str, str], Awaitable[bool]]
-CHECK_USERNAME_FOR_SPAM_CALLBACK = Callable[[UserProfile], Awaitable[bool]]
+USER_MAY_JOIN_ROOM_CALLBACK = Callable[
+    [str, str, bool], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+USER_MAY_INVITE_CALLBACK = Callable[
+    [str, str, str], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+USER_MAY_SEND_3PID_INVITE_CALLBACK = Callable[
+    [str, str, str, str], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+USER_MAY_CREATE_ROOM_CALLBACK = Callable[
+    [str], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+USER_MAY_CREATE_ROOM_ALIAS_CALLBACK = Callable[
+    [str, RoomAlias], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+USER_MAY_PUBLISH_ROOM_CALLBACK = Callable[
+    [str, str], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
+CHECK_USERNAME_FOR_SPAM_CALLBACK = Callable[
+    [UserProfile], Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]]
+]
 LEGACY_CHECK_REGISTRATION_FOR_SPAM_CALLBACK = Callable[
     [
         Optional[dict],
@@ -66,11 +84,11 @@ CHECK_REGISTRATION_FOR_SPAM_CALLBACK = Callable[
         Collection[Tuple[str, str]],
         Optional[str],
     ],
-    Awaitable[RegistrationBehaviour],
+    Awaitable[Union[RegistrationBehaviour, Codes]],
 ]
 CHECK_MEDIA_FILE_FOR_SPAM_CALLBACK = Callable[
     [ReadableFileWrapper, FileInfo],
-    Awaitable[bool],
+    Awaitable[Union[ALLOW, Codes, DEPRECATED_BOOL]],
 ]
 
 
@@ -163,10 +181,7 @@ def load_legacy_spam_checkers(hs: "synapse.server.HomeServer") -> None:
 
 
 class SpamChecker:
-    def __init__(self, hs: "synapse.server.HomeServer") -> None:
-        self.hs = hs
-        self.clock = hs.get_clock()
-
+    def __init__(self) -> None:
         self._check_event_for_spam_callbacks: List[CHECK_EVENT_FOR_SPAM_CALLBACK] = []
         self._user_may_join_room_callbacks: List[USER_MAY_JOIN_ROOM_CALLBACK] = []
         self._user_may_invite_callbacks: List[USER_MAY_INVITE_CALLBACK] = []
@@ -259,10 +274,7 @@ class SpamChecker:
             will be used as the error message returned to the user.
         """
         for callback in self._check_event_for_spam_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                res: Union[bool, str] = await delay_cancellation(callback(event))
+            res: Union[bool, str] = await delay_cancellation(callback(event))
             if res:
                 return res
 
@@ -283,12 +295,9 @@ class SpamChecker:
             Whether the user may join the room
         """
         for callback in self._user_may_join_room_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_join_room = await delay_cancellation(
-                    callback(user_id, room_id, is_invited)
-                )
+            may_join_room = await delay_cancellation(
+                callback(user_id, room_id, is_invited)
+            )
             if may_join_room is False:
                 return False
 
@@ -310,12 +319,9 @@ class SpamChecker:
             True if the user may send an invite, otherwise False
         """
         for callback in self._user_may_invite_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_invite = await delay_cancellation(
-                    callback(inviter_userid, invitee_userid, room_id)
-                )
+            may_invite = await delay_cancellation(
+                callback(inviter_userid, invitee_userid, room_id)
+            )
             if may_invite is False:
                 return False
 
@@ -341,12 +347,9 @@ class SpamChecker:
             True if the user may send the invite, otherwise False
         """
         for callback in self._user_may_send_3pid_invite_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_send_3pid_invite = await delay_cancellation(
-                    callback(inviter_userid, medium, address, room_id)
-                )
+            may_send_3pid_invite = await delay_cancellation(
+                callback(inviter_userid, medium, address, room_id)
+            )
             if may_send_3pid_invite is False:
                 return False
 
@@ -364,10 +367,7 @@ class SpamChecker:
             True if the user may create a room, otherwise False
         """
         for callback in self._user_may_create_room_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_create_room = await delay_cancellation(callback(userid))
+            may_create_room = await delay_cancellation(callback(userid))
             if may_create_room is False:
                 return False
 
@@ -388,12 +388,9 @@ class SpamChecker:
             True if the user may create a room alias, otherwise False
         """
         for callback in self._user_may_create_room_alias_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_create_room_alias = await delay_cancellation(
-                    callback(userid, room_alias)
-                )
+            may_create_room_alias = await delay_cancellation(
+                callback(userid, room_alias)
+            )
             if may_create_room_alias is False:
                 return False
 
@@ -412,10 +409,7 @@ class SpamChecker:
             True if the user may publish the room, otherwise False
         """
         for callback in self._user_may_publish_room_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                may_publish_room = await delay_cancellation(callback(userid, room_id))
+            may_publish_room = await delay_cancellation(callback(userid, room_id))
             if may_publish_room is False:
                 return False
 
@@ -437,13 +431,9 @@ class SpamChecker:
             True if the user is spammy.
         """
         for callback in self._check_username_for_spam_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                # Make a copy of the user profile object to ensure the spam checker cannot
-                # modify it.
-                res = await delay_cancellation(callback(user_profile.copy()))
-            if res:
+            # Make a copy of the user profile object to ensure the spam checker cannot
+            # modify it.
+            if await delay_cancellation(callback(user_profile.copy())):
                 return True
 
         return False
@@ -471,12 +461,9 @@ class SpamChecker:
         """
 
         for callback in self._check_registration_for_spam_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                behaviour = await delay_cancellation(
-                    callback(email_threepid, username, request_info, auth_provider_id)
-                )
+            behaviour = await delay_cancellation(
+                callback(email_threepid, username, request_info, auth_provider_id)
+            )
             assert isinstance(behaviour, RegistrationBehaviour)
             if behaviour != RegistrationBehaviour.ALLOW:
                 return behaviour
@@ -518,10 +505,7 @@ class SpamChecker:
         """
 
         for callback in self._check_media_file_for_spam_callbacks:
-            with Measure(
-                self.clock, "{}.{}".format(callback.__module__, callback.__qualname__)
-            ):
-                spam = await delay_cancellation(callback(file_wrapper, file_info))
+            spam = await delay_cancellation(callback(file_wrapper, file_info))
             if spam:
                 return True
 
