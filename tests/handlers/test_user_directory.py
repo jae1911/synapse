@@ -19,10 +19,12 @@ from twisted.test.proto_helpers import MemoryReactor
 
 import synapse.rest.admin
 from synapse.api.constants import UserTypes
+from synapse.api.errors import Code
 from synapse.api.room_versions import RoomVersion, RoomVersions
 from synapse.appservice import ApplicationService
 from synapse.rest.client import login, register, room, user_directory
 from synapse.server import HomeServer
+from synapse.spam_checker_api import ALLOW, Decision
 from synapse.storage.roommember import ProfileInfo
 from synapse.types import create_requester
 from synapse.util import Clock
@@ -773,12 +775,24 @@ class UserDirectoryTestCase(unittest.HomeserverTestCase):
         s = self.get_success(self.handler.search_users(u1, "user2", 10))
         self.assertEqual(len(s["results"]), 1)
 
-        async def allow_all(user_profile: ProfileInfo) -> bool:
+        async def allow_all_old(user_profile: ProfileInfo) -> bool:
             # Allow all users.
             return False
 
-        # Configure a spam checker that does not filter any users.
+        # Configure a spam checker that does not filter any users (old-style)
         spam_checker = self.hs.get_spam_checker()
+        spam_checker._check_username_for_spam_callbacks = [allow_all_old]
+
+        # The results do not change:
+        # We get one search result when searching for user2 by user1.
+        s = self.get_success(self.handler.search_users(u1, "user2", 10))
+        self.assertEqual(len(s["results"]), 1)
+
+        async def allow_all(user_profile: ProfileInfo) -> Decision:
+            # Allow all users.
+            return ALLOW
+
+        # Configure a spam checker that does not filter any users
         spam_checker._check_username_for_spam_callbacks = [allow_all]
 
         # The results do not change:
@@ -787,9 +801,20 @@ class UserDirectoryTestCase(unittest.HomeserverTestCase):
         self.assertEqual(len(s["results"]), 1)
 
         # Configure a spam checker that filters all users.
-        async def block_all(user_profile: ProfileInfo) -> bool:
+        async def block_all_old(user_profile: ProfileInfo) -> bool:
             # All users are spammy.
             return True
+
+        spam_checker._check_username_for_spam_callbacks = [block_all_old]
+
+        # User1 now gets no search results for any of the other users.
+        s = self.get_success(self.handler.search_users(u1, "user2", 10))
+        self.assertEqual(len(s["results"]), 0)
+
+        # Configure a spam checker that filters all users.
+        async def block_all(user_profile: ProfileInfo) -> Code:
+            # All users are spammy.
+            return Code.FORBIDDEN
 
         spam_checker._check_username_for_spam_callbacks = [block_all]
 
