@@ -143,7 +143,9 @@ class DirectoryHandler:
             )
             if spam_check is not synapse.spam_checker_api.ALLOW:
                 raise AuthError(
-                    403, "This alias creation request has been rejected", spam_check
+                    403,
+                    "This alias creation request has been rejected",
+                    spam_check,
                 )
 
             if not self.config.roomdirectory.is_alias_creation_allowed(

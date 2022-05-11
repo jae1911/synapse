@@ -17,6 +17,7 @@
 
 import logging
 import typing
+from enum import Enum
 from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Union
 
@@ -30,7 +31,13 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Codes:
+class Code(Enum):
+    """
+    All known error codes.
+
+    If you expand this, please keep `Codes` below synchronized.
+    """
+
     UNRECOGNIZED = "M_UNRECOGNIZED"
     UNAUTHORIZED = "M_UNAUTHORIZED"
     FORBIDDEN = "M_FORBIDDEN"
@@ -80,6 +87,64 @@ class Codes:
     UNABLE_TO_GRANT_JOIN = "M_UNABLE_TO_GRANT_JOIN"
 
     UNREDACTED_CONTENT_DELETED = "FI.MAU.MSC2815_UNREDACTED_CONTENT_DELETED"
+
+
+class Codes:
+    """
+    A namespace for error codes.
+
+    If you expand this, please keep `Code` above synchronized.
+    """
+
+    UNRECOGNIZED = Code.UNRECOGNIZED.value
+    UNAUTHORIZED = Code.UNAUTHORIZED.value
+    FORBIDDEN = Code.FORBIDDEN.value
+    BAD_JSON = Code.BAD_JSON.value
+    NOT_JSON = Code.NOT_JSON.value
+    USER_IN_USE = Code.USER_IN_USE.value
+    ROOM_IN_USE = Code.ROOM_IN_USE.value
+    BAD_PAGINATION = Code.BAD_PAGINATION.value
+    BAD_STATE = Code.BAD_STATE.value
+    UNKNOWN = Code.UNKNOWN.value
+    NOT_FOUND = Code.NOT_FOUND.value
+    MISSING_TOKEN = Code.MISSING_TOKEN.value
+    UNKNOWN_TOKEN = Code.UNKNOWN_TOKEN.value
+    GUEST_ACCESS_FORBIDDEN = Code.GUEST_ACCESS_FORBIDDEN.value
+    LIMIT_EXCEEDED = Code.LIMIT_EXCEEDED.value
+    CAPTCHA_NEEDED = Code.CAPTCHA_NEEDED.value
+    CAPTCHA_INVALID = Code.CAPTCHA_INVALID.value
+    MISSING_PARAM = Code.MISSING_PARAM.value
+    INVALID_PARAM = Code.INVALID_PARAM.value
+    TOO_LARGE = Code.TOO_LARGE.value
+    EXCLUSIVE = Code.EXCLUSIVE.value
+    THREEPID_AUTH_FAILED = Code.THREEPID_AUTH_FAILED.value
+    THREEPID_IN_USE = Code.THREEPID_IN_USE.value
+    THREEPID_NOT_FOUND = Code.THREEPID_NOT_FOUND.value
+    THREEPID_DENIED = Code.THREEPID_DENIED.value
+    INVALID_USERNAME = Code.INVALID_USERNAME.value
+    SERVER_NOT_TRUSTED = Code.SERVER_NOT_TRUSTED.value
+    CONSENT_NOT_GIVEN = Code.CONSENT_NOT_GIVEN.value
+    CANNOT_LEAVE_SERVER_NOTICE_ROOM = Code.CANNOT_LEAVE_SERVER_NOTICE_ROOM.value
+    RESOURCE_LIMIT_EXCEEDED = Code.RESOURCE_LIMIT_EXCEEDED.value
+    UNSUPPORTED_ROOM_VERSION = Code.UNSUPPORTED_ROOM_VERSION.value
+    INCOMPATIBLE_ROOM_VERSION = Code.INCOMPATIBLE_ROOM_VERSION.value
+    WRONG_ROOM_KEYS_VERSION = Code.WRONG_ROOM_KEYS_VERSION.value
+    EXPIRED_ACCOUNT = Code.EXPIRED_ACCOUNT.value
+    PASSWORD_TOO_SHORT = Code.PASSWORD_TOO_SHORT.value
+    PASSWORD_NO_DIGIT = Code.PASSWORD_NO_DIGIT.value
+    PASSWORD_NO_UPPERCASE = Code.PASSWORD_NO_UPPERCASE.value
+    PASSWORD_NO_LOWERCASE = Code.PASSWORD_NO_LOWERCASE.value
+    PASSWORD_NO_SYMBOL = Code.PASSWORD_NO_SYMBOL.value
+    PASSWORD_IN_DICTIONARY = Code.PASSWORD_IN_DICTIONARY.value
+    WEAK_PASSWORD = Code.WEAK_PASSWORD.value
+    INVALID_SIGNATURE = Code.INVALID_SIGNATURE.value
+    USER_DEACTIVATED = Code.USER_DEACTIVATED.value
+    BAD_ALIAS = Code.BAD_ALIAS.value
+    # For restricted join rules.
+    UNABLE_AUTHORISE_JOIN = Code.UNABLE_AUTHORISE_JOIN.value
+    UNABLE_TO_GRANT_JOIN = Code.UNABLE_TO_GRANT_JOIN.value
+
+    UNREDACTED_CONTENT_DELETED = Code.UNREDACTED_CONTENT_DELETED.value
 
 
 class CodeMessageException(RuntimeError):
@@ -134,7 +199,7 @@ class SynapseError(CodeMessageException):
         errcode: Matrix error code e.g 'M_FORBIDDEN'
     """
 
-    def __init__(self, code: int, msg: str, errcode: str = Codes.UNKNOWN):
+    def __init__(self, code: int, msg: str, errcode: Union[str, Code] = Codes.UNKNOWN):
         """Constructs a synapse error.
 
         Args:
@@ -143,6 +208,8 @@ class SynapseError(CodeMessageException):
             errcode: The matrix error code e.g 'M_FORBIDDEN'
         """
         super().__init__(code, msg)
+        if isinstance(errcode, Code):
+            errcode = errcode.value
         self.errcode = errcode
 
     def error_dict(self) -> "JsonDict":
@@ -168,7 +235,7 @@ class ProxiedRequestError(SynapseError):
         self,
         code: int,
         msg: str,
-        errcode: str = Codes.UNKNOWN,
+        errcode: Union[str, Code] = Codes.UNKNOWN,
         additional_fields: Optional[Dict] = None,
     ):
         super().__init__(code, msg, errcode)
@@ -265,7 +332,9 @@ class UnrecognizedRequestError(SynapseError):
     """An error indicating we don't understand the request you're trying to make"""
 
     def __init__(
-        self, msg: str = "Unrecognized request", errcode: str = Codes.UNRECOGNIZED
+        self,
+        msg: str = "Unrecognized request",
+        errcode: Union[str, Code] = Codes.UNRECOGNIZED,
     ):
         super().__init__(400, msg, errcode)
 
@@ -273,7 +342,9 @@ class UnrecognizedRequestError(SynapseError):
 class NotFoundError(SynapseError):
     """An error indicating we can't find the thing you asked for"""
 
-    def __init__(self, msg: str = "Not found", errcode: str = Codes.NOT_FOUND):
+    def __init__(
+        self, msg: str = "Not found", errcode: Union[str, Code] = Codes.NOT_FOUND
+    ):
         super().__init__(404, msg, errcode=errcode)
 
 
@@ -282,7 +353,9 @@ class AuthError(SynapseError):
     other poorly-defined times.
     """
 
-    def __init__(self, code: int, msg: str, errcode: str = Codes.FORBIDDEN):
+    def __init__(
+        self, code: int, msg: str, errcode: Union[str, Code] = Codes.FORBIDDEN
+    ):
         super().__init__(code, msg, errcode)
 
 
@@ -297,7 +370,7 @@ class InvalidClientCredentialsError(SynapseError):
     M_UNKNOWN_TOKEN respectively.
     """
 
-    def __init__(self, msg: str, errcode: str):
+    def __init__(self, msg: str, errcode: Union[str, Code]):
         super().__init__(code=401, msg=msg, errcode=errcode)
 
 

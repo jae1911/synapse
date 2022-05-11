@@ -46,28 +46,28 @@ DEPRECATED_BOOL = bool
 
 CHECK_EVENT_FOR_SPAM_CALLBACK = Callable[
     ["synapse.events.EventBase"],
-    Awaitable[Union[Allow, Codes, str, DEPRECATED_BOOL]],
+    Awaitable[Union[Allow, Code, str, DEPRECATED_BOOL]],
 ]
 USER_MAY_JOIN_ROOM_CALLBACK = Callable[
-    [str, str, bool], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str, str, bool], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 USER_MAY_INVITE_CALLBACK = Callable[
-    [str, str, str], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str, str, str], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 USER_MAY_SEND_3PID_INVITE_CALLBACK = Callable[
-    [str, str, str, str], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str, str, str, str], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 USER_MAY_CREATE_ROOM_CALLBACK = Callable[
-    [str], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 USER_MAY_CREATE_ROOM_ALIAS_CALLBACK = Callable[
-    [str, RoomAlias], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str, RoomAlias], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 USER_MAY_PUBLISH_ROOM_CALLBACK = Callable[
-    [str, str], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [str, str], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 CHECK_USERNAME_FOR_SPAM_CALLBACK = Callable[
-    [UserProfile], Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]]
+    [UserProfile], Awaitable[Union[Allow, Code, DEPRECATED_BOOL]]
 ]
 LEGACY_CHECK_REGISTRATION_FOR_SPAM_CALLBACK = Callable[
     [
@@ -84,11 +84,11 @@ CHECK_REGISTRATION_FOR_SPAM_CALLBACK = Callable[
         Collection[Tuple[str, str]],
         Optional[str],
     ],
-    Awaitable[Union[RegistrationBehaviour, Codes]],
+    Awaitable[Union[RegistrationBehaviour, Code]],
 ]
 CHECK_MEDIA_FILE_FOR_SPAM_CALLBACK = Callable[
     [ReadableFileWrapper, FileInfo],
-    Awaitable[Union[Allow, Codes, DEPRECATED_BOOL]],
+    Awaitable[Union[Allow, Code, DEPRECATED_BOOL]],
 ]
 
 
@@ -259,7 +259,7 @@ class SpamChecker:
 
     async def check_event_for_spam(
         self, event: "synapse.events.EventBase"
-    ) -> Union[Allow, Codes, str]:
+    ) -> Union[Allow, Code, str]:
         """Checks if a given event is considered "spammy" by this server.
 
         If the server considers an event spammy, then it will be rejected if
@@ -272,13 +272,13 @@ class SpamChecker:
         Returns:
             - on `ALLOW`, the event is considered good (non-spammy) and should
                 be let through. Other spamcheck filters may still reject it.
-            - on `Codes`, the event is considered spammy and is rejected with a specific
+            - on `Code`, the event is considered spammy and is rejected with a specific
                 error message/code.
             - on `str`, the event is considered spammy and the string is used as error
                 message.
         """
         for callback in self._check_event_for_spam_callbacks:
-            res: Union[ALLOW, Codes, str, DEPRECATED_BOOL] = await delay_cancellation(
+            res: Union[Allow, Code, str, DEPRECATED_BOOL] = await delay_cancellation(
                 callback(event)
             )
             if res is False or res is ALLOW:
@@ -303,7 +303,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_join_room_callbacks:
             may_join_room = await delay_cancellation(
@@ -312,7 +312,7 @@ class SpamChecker:
             if may_join_room is True or may_join_room is ALLOW:
                 continue
             elif may_join_room is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_join_room
 
@@ -330,7 +330,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_invite_callbacks:
             may_invite = await delay_cancellation(
@@ -339,7 +339,7 @@ class SpamChecker:
             if may_invite is True or may_invite is ALLOW:
                 continue
             elif may_invite is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_invite
 
@@ -361,7 +361,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_send_3pid_invite_callbacks:
             may_send_3pid_invite = await delay_cancellation(
@@ -370,7 +370,7 @@ class SpamChecker:
             if may_send_3pid_invite is True or may_send_3pid_invite is ALLOW:
                 continue
             elif may_send_3pid_invite is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_send_3pid_invite
 
@@ -384,14 +384,14 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_create_room_callbacks:
             may_create_room = await delay_cancellation(callback(userid))
             if may_create_room is True or may_create_room is ALLOW:
                 continue
             elif may_create_room is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_create_room
 
@@ -408,7 +408,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_create_room_alias_callbacks:
             may_create_room_alias = await delay_cancellation(
@@ -417,7 +417,7 @@ class SpamChecker:
             if may_create_room_alias is True or may_create_room_alias is ALLOW:
                 continue
             elif may_create_room_alias is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_create_room_alias
 
@@ -425,7 +425,7 @@ class SpamChecker:
 
     async def user_may_publish_room(
         self, userid: str, room_id: str
-    ) -> Union[ALLOW, Codes, DEPRECATED_BOOL]:
+    ) -> Union[Allow, Code]:
         """Checks if a given user may publish a room to the directory
 
         Args:
@@ -434,14 +434,14 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._user_may_publish_room_callbacks:
             may_publish_room = await delay_cancellation(callback(userid, room_id))
             if may_publish_room is True or may_publish_room is ALLOW:
                 continue
             elif may_publish_room is False:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return may_publish_room
 
@@ -461,7 +461,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
         for callback in self._check_username_for_spam_callbacks:
             # Make a copy of the user profile object to ensure the spam checker cannot
@@ -470,7 +470,7 @@ class SpamChecker:
             if is_spam is False or is_spam is ALLOW:
                 continue
             elif is_spam is True:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return is_spam
 
@@ -502,8 +502,6 @@ class SpamChecker:
             behaviour = await delay_cancellation(
                 callback(email_threepid, username, request_info, auth_provider_id)
             )
-            if isinstance(behaviour, Codes):
-                return behaviour
             assert isinstance(behaviour, RegistrationBehaviour)
             if behaviour != RegistrationBehaviour.ALLOW:
                 return behaviour
@@ -540,7 +538,7 @@ class SpamChecker:
 
         Returns:
             - on `ALLOW`, the action is permitted.
-            - on `Codes`, the action is rejected with a specific error message/code.
+            - on `Code`, the action is rejected with a specific error message/code.
         """
 
         for callback in self._check_media_file_for_spam_callbacks:
@@ -548,7 +546,7 @@ class SpamChecker:
             if is_spam is False or is_spam is ALLOW:
                 continue
             elif is_spam is True:
-                return Codes.FORBIDDEN
+                return Code.FORBIDDEN
             else:
                 return is_spam
 

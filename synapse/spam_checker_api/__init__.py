@@ -14,7 +14,7 @@
 from enum import Enum
 from typing import NewType, Union
 
-from synapse.api.errors import Codes
+from synapse.api.errors import Code
 
 
 class RegistrationBehaviour(Enum):
@@ -34,7 +34,7 @@ ALLOW = Allow("Allow")
 Return this constant to allow a message to pass.
 """
 
-Decision = Union[Allow, Codes]
+Decision = Union[Allow, Code]
 """
 Union to define whether a request should be allowed or rejected.
 

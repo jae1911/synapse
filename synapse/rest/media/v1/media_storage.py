@@ -28,6 +28,7 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    cast,
 )
 
 import attr
@@ -37,7 +38,7 @@ from twisted.internet.interfaces import IConsumer
 from twisted.protocols.basic import FileSender
 
 import synapse
-from synapse.api.errors import NotFoundError
+from synapse.api.errors import Code, NotFoundError
 from synapse.logging.context import defer_to_thread, make_deferred_yieldable
 from synapse.util import Clock
 from synapse.util.file_consumer import BackgroundFileConsumer
@@ -154,8 +155,9 @@ class MediaStorage:
                         # Note that we'll delete the stored media, due to the
                         # try/except below. The media also won't be stored in
                         # the DB.
+                        code = cast(Code, spam_check)
                         raise SpamMediaException(
-                            "File rejected as probable spam", spam_check.value
+                            "File rejected as probable spam", code.value
                         )
 
                     for provider in self.storage_providers:
