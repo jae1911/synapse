@@ -15,7 +15,7 @@ _Signature extended to support Allow and Code in Synapse v1.60.0_
 _Boolean return value deprecated in Synapse v1.60.0_
 
 ```python
-async def check_event_for_spam(event: "synapse.events.EventBase") -> Union[Allow, Code, str, DEPRECATED_BOOL]
+async def check_event_for_spam(event: "synapse.events.EventBase") -> Union[Allow, Code, DEPRECATED_STR, DEPRECATED_BOOL]
 ```
 
 Called when receiving an event from a client or via federation. The callback must return either:
@@ -23,7 +23,7 @@ Called when receiving an event from a client or via federation. The callback mus
     may still decide to reject it.
   - `synapse.api.errors.Code` to reject the operation with an error code. In case
     of doubt, `Code.FORBIDDEN` is a good error code.
-  - a `str` to reject the operation and specify an error message. Note that clients
+  - (deprecated) a `str` to reject the operation and specify an error message. Note that clients
     typically will not localize the error message to the user's preferred locale.
   - (deprecated) on `False`, behave as `ALLOW`. Deprecated as confusing, as some
     callbacks in expect `True` to allow and others `True` to reject.
