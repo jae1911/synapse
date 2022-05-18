@@ -2995,7 +2995,7 @@ class ThreepidInviteTestCase(unittest.HomeserverTestCase):
 
         # Add a mock to the spamchecker callbacks for user_may_send_3pid_invite. Make it
         # allow everything for now.
-        mock = Mock(return_value=make_awaitable(ALLOW))
+        mock = Mock(return_value=make_awaitable(ALLOW), spec=lambda *x: None)
         self.hs.get_spam_checker()._user_may_send_3pid_invite_callbacks.append(mock)
 
         # Send a 3PID invite into the room and check that it succeeded.
