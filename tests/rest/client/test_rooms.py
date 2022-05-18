@@ -689,7 +689,7 @@ class RoomsCreateTestCase(RoomBase):
         ) -> bool:
             return False
 
-        join_mock = Mock(side_effect=user_may_join_room)
+        join_mock = Mock(side_effect=user_may_join_room, spec=lambda *x: None)
         self.hs.get_spam_checker()._user_may_join_room_callbacks.append(join_mock)
 
         channel = self.make_request(
@@ -713,7 +713,7 @@ class RoomsCreateTestCase(RoomBase):
         ) -> Decision:
             return Code.FORBIDDEN
 
-        join_mock = Mock(side_effect=user_may_join_room)
+        join_mock = Mock(side_effect=user_may_join_room, spec=lambda *x: None)
         self.hs.get_spam_checker()._user_may_join_room_callbacks.append(join_mock)
 
         channel = self.make_request(
@@ -1007,7 +1007,7 @@ class RoomJoinTestCase(RoomBase):
         ) -> Decision:
             return return_value
 
-        callback_mock = Mock(side_effect=user_may_join_room)
+        callback_mock = Mock(side_effect=user_may_join_room, spec=lambda *x: None)
         self.hs.get_spam_checker()._user_may_join_room_callbacks.append(callback_mock)
 
         # Join a first room, without being invited to it.
